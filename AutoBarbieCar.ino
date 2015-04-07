@@ -1,6 +1,17 @@
-#include <Servo.h> 
+//import average
+#include <Average.h>
 
+// Servo
+#include <Servo.h> 
 Servo turnServo;  //create servo object to control a servo 
+
+// Compass
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM303_U.h>
+Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
+const float Pi = 3.14159;
+float compassStraight = 0.0;
 
 // Turning 
 byte turnServoPin = 9; //pin for servo motor
@@ -31,21 +42,30 @@ int distThreshold = 450;    //threshold for the distance sensor
 boolean delayOverride = false;
 
 void setup(){
+    randomSeed(analogRead(3)); //initialize random seed
+    Serial.begin(9600); //start Serial
+  
     //set pins
-    pinMode(10, OUTPUT);
-    pinMode(11, OUTPUT);
-    pinMode(12, OUTPUT);
-    pinMode(driveMotorDirectionPin, OUTPUT);
+    pinMode(10, OUTPUT); //left LED (red)
+    pinMode(11, OUTPUT); //center LED (yellow)
+    pinMode(12, OUTPUT); //right LED (green)
+    pinMode(driveMotorDirectionPin, OUTPUT); 
     turnServo.attach(turnServoPin);  //attaches the servo to the servo object
-
-    randomSeed(analogRead(5)); //initialize random seed
-    Serial.begin(9600);
+    if(!mag.begin()){ //initilize compass
+        /* There was a problem detecting the LSM303 ... check your connections */
+        Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+        //while(1);
+    }
 }
 
 void loop(){
+    getCompass(); //get compass direction
+    
+    //read distance sensors
     FLDistSensorVal = analogRead(FLDistSensorPin);
     FCDistSensorVal = analogRead(FCDistSensorPin);
     FRDistSensorVal = analogRead(FRDistSensorPin);
+    //print distence 
     Serial.print('a');
     Serial.println(FLDistSensorVal);
     Serial.print('b');
@@ -162,3 +182,28 @@ void right(){
     //Serial.println("right");
 }
 
+void initCompass(){
+    Average<float> ave(5);
+    for(byte x=0; x<5; x++){
+       ave.push(getCompass());
+    }
+    compassStraight = ave.mean();
+}
+
+float getCompass(){
+  /* Get a new sensor event */ 
+  sensors_event_t event; 
+  mag.getEvent(&event);
+  
+  // Calculate the angle of the vector y,x
+  float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / Pi;
+  
+  // Normalize to 0-360
+  if (heading < 0)
+  {
+    heading = 360 + heading;
+  }
+  Serial.print("Compass Heading: ");
+  Serial.println(heading);
+  return heading;
+}
