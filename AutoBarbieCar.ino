@@ -1,44 +1,41 @@
-//import average
-#include <Average.h>
-
-// Servo
+/* Servo */
 #include <Servo.h> 
 Servo turnServo;  //create servo object to control a servo 
 
-// Compass
+/* Compass */
+#include <Average.h> //import Average library for compass initialization
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
-Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
-const float Pi = 3.14159;
-float compassStraight = 0.0;
-//float currentDirection  = 0.0;
+Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345); //compass object
+const float Pi = 3.14159; //apparently the pi constant isn't built into Arduino
+float compassStraight = 0.0; //this will hold what we decide as "straight"
 
-// Turning 
+/* Turning */
 byte turnServoPin = 9; //pin for servo motor
 byte turnServoDirection = 1; //0=left; 1=center; 2=right
 //byte turnServoLastDirection = 1;
 
-// Drive Motor
-byte driveMotorDirectionPin = 4;
-byte driveMotorSpeedPin = 5;
+/* Drive Motor */
+byte driveMotorDirectionPin = 4; //pin for drive motor direction control
+byte driveMotorSpeedPin = 5; //pin for drive motor speed control
 //unsigned long driveMotorUpdateDuration; //will store last time motor was updated
 unsigned long driveMotorPreviousMillis; //will store last time motor was updated
-int driveMotorDelay;
+int driveMotorDelay; //how long to wait before updating the motor during manuver
 boolean driveMotorDirection = false; //false=forward; true=backward
 //boolean driveMotorLastDirection = false;
 
-// Distance Sensors
+/* Distance Sensors */
 int FLDistSensorVal;          //value from the distance Front Left sensor
-int FLDistSensorPin = 0;   //Front Left Sensor analog pin
-boolean FLDetect = false;
-int FCDistSensorVal;         //value from the distance Front Right sensor
-int FCDistSensorPin = 1;  //Front Center Sensor analog pin
-boolean FCDetect = false;
-int FRDistSensorVal;         //value from the distance Front Right sensor
-int FRDistSensorPin = 2;  //Front Right Sensor analog pin
-boolean FRDetect = false;
-int distThreshold = 450;    //threshold for the distance sensor
+int FLDistSensorPin = 0;   //Front Left sensor analog pin
+boolean FLDetect = false; //Front Left sensor detection
+int FCDistSensorVal;          //value from the distance Front Right sensor
+int FCDistSensorPin = 1;   //Front Center sensor analog pin
+boolean FCDetect = false; //Front Center sensor detection
+int FRDistSensorVal;          //value from the distance Front Right sensor
+int FRDistSensorPin = 2;   //Front Right sensor analog pin
+boolean FRDetect = false; //Front Right sensor detection
+int distThreshold = 450;     //threshold for the distance sensor
 
 boolean delayOverride = false;
 
@@ -53,18 +50,16 @@ void setup(){
     pinMode(driveMotorDirectionPin, OUTPUT); 
     turnServo.attach(turnServoPin);  //attaches the servo to the servo object
     if(!mag.begin()){ //initilize compass
-        /* There was a problem detecting the LSM303 ... check your connections */
+        //There was a problem detecting the LSM303 ... check your connections
         Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-        //while(1);
+        while(1); //stall forever
     }
     else{
-        initCompass();
+        initCompass(); //initilize the compass; set the direction we will use as "straight"
     }
 }
 
 void loop(){
-    //currentDirection = getCompass(); //get compass direction
-    
     //read distance sensors
     FLDistSensorVal = analogRead(FLDistSensorPin);
     FCDistSensorVal = analogRead(FCDistSensorPin);
@@ -78,10 +73,12 @@ void loop(){
     Serial.println(FRDistSensorVal);
     Serial.println("--");
     
+    //check for distance sensor detection
     if(FLDistSensorVal > distThreshold){FLDetect=true; digitalWrite(10,HIGH);}
     if(FCDistSensorVal > distThreshold){FCDetect=true; digitalWrite(11,HIGH);}
     if(FRDistSensorVal > distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
     
+    //check if we need to override a manuver
     if (FLDetect==true && FCDetect==true && FRDetect==true){ 
         delayOverride = true;
     }
@@ -95,9 +92,10 @@ void loop(){
         delayOverride = true;
     }
     
-    if((millis() - driveMotorPreviousMillis) > driveMotorDelay || delayOverride == true){
-        delayOverride = false;
-        driveMotorPreviousMillis = millis();
+    //main manuver logic
+    if((millis() - driveMotorPreviousMillis) > driveMotorDelay || delayOverride == true){ //only change if delay is done or overriding manuver 
+        delayOverride = false; //reset override flag, if any
+        driveMotorPreviousMillis = millis(); //set up for next delay
         
         if(FLDetect==false && FCDetect==false && FRDetect==false){ //forward
             forward(150);
@@ -132,15 +130,17 @@ void loop(){
         }
     }
     
+    //reset distance sensor detect flags
     FLDetect=false;
     FCDetect=false;
     FRDetect=false;
+    //reset distance sensor detect LEDs
     digitalWrite(10,LOW);
     digitalWrite(11,LOW);
     digitalWrite(12,LOW);
 }
 
-void forward(int velocity){
+void forward(int velocity){ //drive forward
     digitalWrite(driveMotorDirectionPin, LOW); //LOW is forward
     analogWrite(driveMotorSpeedPin, velocity);
     driveMotorDirection = false;
@@ -148,7 +148,7 @@ void forward(int velocity){
     //Serial.println("forward");
 }
 
-void backward(int velocity){
+void backward(int velocity){ //drive backward
     delay(50);
     digitalWrite(driveMotorDirectionPin, HIGH); //HIGH is backward
     analogWrite(driveMotorSpeedPin, velocity);
@@ -157,47 +157,39 @@ void backward(int velocity){
     //Serial.println("backward");
 }
 
-void straight(){
-    //get position of turning servo and turn until center
-    //if (turnServo.read() >= 80){
-        turnServo.write(79);  //turn servo to x degrees
-    //}
-    //else if (turnServo.read() <= 79){
-    //    turnServo.write(80);  //turn servo to x degrees
-    //}
+void straight(){ //turn wheels straight
+    turnServo.write(79);  //turn servo to x degrees
     turnServoDirection = 1;
     //turnServoLastDirection = 1
     //Serial.println("straight");
 }
 
-void left(){
+void left(){ //turn wheels left
     turnServo.write(66); //turn servo to x degrees
-    //delay(duration)
     turnServoDirection = 0;
     //turnServoLastDirection = 0;
     //Serial.println("left");
 }
 
-void right(){
+void right(){ //turn wheels right
     turnServo.write(89); //turn servo to x degrees
-    //delay(duration);
     turnServoDirection  = 2;
     //turnServoLastDirection = 2;
     //Serial.println("right");
 }
 
-void initCompass(){
+void initCompass(){ //initilize the compass; set the direction we will use as "straight"
     Average<float> ave(5);
-    for(byte x=0; x<5; x++){
+    for(byte x=0; x<5; x++){ //take five samples
        ave.push(getCompass());
     }
-    compassStraight = ave.mean();
+    compassStraight = ave.mean(); //average the samples and use as "straight"
     Serial.print("Initial Compass Average (will use as straight):");
     Serial.println(compassStraight);
 }
 
-float getCompass(){
-    /* Get a new sensor event */ 
+float getCompass(){ //read from the compass, convert to 360 degrees, and return as float
+    //Get a new sensor event
     sensors_event_t event; 
     mag.getEvent(&event);
     
@@ -213,9 +205,12 @@ float getCompass(){
     return heading;
 }
 
-void straightenCompass(){
-    float compassCurrentDirection  = getCompass();
-    float diff = compassCurrentDirection - compassStraight;
+void straightenCompass(){ //determine if car is not straight and turn if necessary
+    float compassTolerance = 3.0; //set compass deviation tolerance in degrees
+    
+    float compassCurrentDirection  = getCompass(); //get current direction
+    float diff = compassCurrentDirection - compassStraight; //find the difference between the current direction and "straight"
+    //correct for overflowing
     if (diff > 180){
         diff = diff - 360; //for angles > 180, correct in the opposite direction.
     }
@@ -223,10 +218,10 @@ void straightenCompass(){
         diff = diff + 360; //for angles < -180, correct in the opposite direction.
     }
     
-    if (diff > 3.0){ //too far right, turn left
+    if (diff > compassTolerance){ //too far right, turn left
         left();
     }
-    else if (diff < -3.0){ //too far left, turn right
+    else if (diff < -compassTolerance){ //too far left, turn right
         right();
     }
     else{ //straight enough
