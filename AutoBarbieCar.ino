@@ -12,6 +12,7 @@ Servo turnServo;  //create servo object to control a servo
 Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 const float Pi = 3.14159;
 float compassStraight = 0.0;
+//float currentDirection  = 0.0;
 
 // Turning 
 byte turnServoPin = 9; //pin for servo motor
@@ -56,10 +57,13 @@ void setup(){
         Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
         //while(1);
     }
+    else{
+        initCompass();
+    }
 }
 
 void loop(){
-    getCompass(); //get compass direction
+    //currentDirection = getCompass(); //get compass direction
     
     //read distance sensors
     FLDistSensorVal = analogRead(FLDistSensorPin);
@@ -97,8 +101,8 @@ void loop(){
         
         if(FLDetect==false && FCDetect==false && FRDetect==false){ //forward
             forward(150);
-            straight();
             driveMotorDelay = 0;
+            straightenCompass();
         }
         else if (FLDetect==true && FCDetect==true && FRDetect==true){ //backward
             backward(150);
@@ -188,22 +192,44 @@ void initCompass(){
        ave.push(getCompass());
     }
     compassStraight = ave.mean();
+    Serial.print("Initial Compass Average (will use as straight):");
+    Serial.println(compassStraight);
 }
 
 float getCompass(){
-  /* Get a new sensor event */ 
-  sensors_event_t event; 
-  mag.getEvent(&event);
-  
-  // Calculate the angle of the vector y,x
-  float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / Pi;
-  
-  // Normalize to 0-360
-  if (heading < 0)
-  {
-    heading = 360 + heading;
-  }
-  Serial.print("Compass Heading: ");
-  Serial.println(heading);
-  return heading;
+    /* Get a new sensor event */ 
+    sensors_event_t event; 
+    mag.getEvent(&event);
+    
+    //Calculate the angle of the vector y,x
+    float heading = (atan2(event.magnetic.y,event.magnetic.x) * 180) / Pi;
+    
+    //Normalize to 0-360
+    if (heading < 0){
+        heading = 360 + heading;
+    }
+    Serial.print("Compass Facing: ");
+    Serial.println(heading);
+    return heading;
+}
+
+void straightenCompass(){
+    float compassCurrentDirection  = getCompass();
+    float diff = compassCurrentDirection - compassStraight;
+    if (diff > 180){
+        diff = diff - 360; //for angles > 180, correct in the opposite direction.
+    }
+    else if (diff < -180){
+        diff = diff + 360; //for angles < -180, correct in the opposite direction.
+    }
+    
+    if (diff > 3.0){ //too far right, turn left
+        left();
+    }
+    else if (diff < -3.0){ //too far left, turn right
+        right();
+    }
+    else{ //straight enough
+        straight();
+    }
 }
