@@ -12,13 +12,13 @@ const float Pi = 3.14159; //apparently the pi constant isn't built into Arduino
 float compassStraight = 0.0; //this will hold what we decide as "straight"
 
 /* Turning */
-byte turnServoPin = 9; //pin for servo motor
+const byte turnServoPin = 9; //pin for servo motor
 byte turnServoDirection = 1; //0=left; 1=center; 2=right
 //byte turnServoLastDirection = 1;
 
 /* Drive Motor */
-byte driveMotorDirectionPin = 4; //pin for drive motor direction control
-byte driveMotorSpeedPin = 5; //pin for drive motor speed control
+const byte driveMotorDirectionPin = 4; //pin for drive motor direction control
+const byte driveMotorSpeedPin = 5; //pin for drive motor speed control
 //unsigned long driveMotorUpdateDuration; //will store last time motor was updated
 unsigned long driveMotorPreviousMillis; //will store last time motor was updated
 int driveMotorDelay; //how long to wait before updating the motor during manuver
@@ -27,15 +27,12 @@ boolean driveMotorDirection = false; //false=forward; true=backward
 
 /* Distance Sensors */
 int FLDistSensorVal;          //value from the distance Front Left sensor
-int FLDistSensorPin = 0;   //Front Left sensor analog pin
+const byte FLDistSensorPin = 2;   //Front Left sensor analog pin
 boolean FLDetect = false; //Front Left sensor detection
-int FCDistSensorVal;          //value from the distance Front Right sensor
-int FCDistSensorPin = 1;   //Front Center sensor analog pin
-boolean FCDetect = false; //Front Center sensor detection
 int FRDistSensorVal;          //value from the distance Front Right sensor
-int FRDistSensorPin = 2;   //Front Right sensor analog pin
+const byte FRDistSensorPin = 3;   //Front Right sensor analog pin
 boolean FRDetect = false; //Front Right sensor detection
-int distThreshold = 450;     //threshold for the distance sensor
+int distThreshold = 30;     //threshold for the distance sensor
 
 boolean delayOverride = false;
 
@@ -44,6 +41,8 @@ void setup(){
     Serial.begin(9600); //start Serial
   
     //set pins
+    pinMode(FLDistSensorPin, INPUT);
+    pinMode(FRDistSensorPin, INPUT);
     pinMode(10, OUTPUT); //left LED (red)
     pinMode(11, OUTPUT); //center LED (yellow)
     pinMode(12, OUTPUT); //right LED (green)
@@ -60,32 +59,26 @@ void setup(){
 }
 
 void loop(){
+    //delay(500);
     //read distance sensors
-    FLDistSensorVal = analogRead(FLDistSensorPin);
-    FCDistSensorVal = analogRead(FCDistSensorPin);
-    FRDistSensorVal = analogRead(FRDistSensorPin);
+    FLDistSensorVal = (pulseIn(FLDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
+    FRDistSensorVal = (pulseIn(FRDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
     //print distence 
     Serial.print('a');
     Serial.println(FLDistSensorVal);
     Serial.print('b');
-    Serial.println(FCDistSensorVal);
-    Serial.print('c');
     Serial.println(FRDistSensorVal);
     Serial.println("--");
     
     //check for distance sensor detection
-    if(FLDistSensorVal > distThreshold){FLDetect=true; digitalWrite(10,HIGH);}
-    if(FCDistSensorVal > distThreshold){FCDetect=true; digitalWrite(11,HIGH);}
-    if(FRDistSensorVal > distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
+    if(FLDistSensorVal < distThreshold){FLDetect=true; digitalWrite(10,HIGH);}
+    if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
     
     //check if we need to override a manuver
-    if (FLDetect==true && FCDetect==true && FRDetect==true){ 
+    if (FLDetect==true && FRDetect==true){ 
         delayOverride = true;
     }
     else if(FLDetect==true && turnServoDirection != 0){ //left
-        delayOverride = true;
-    }
-    else if(FCDetect==true && turnServoDirection != 1){ //center
         delayOverride = true;
     }
     else if(FRDetect==true && turnServoDirection != 2){ //right
@@ -97,12 +90,12 @@ void loop(){
         delayOverride = false; //reset override flag, if any
         driveMotorPreviousMillis = millis(); //set up for next delay
         
-        if(FLDetect==false && FCDetect==false && FRDetect==false){ //forward
+        if(FLDetect==false && FRDetect==false){ //forward
             forward(150);
             driveMotorDelay = 0;
             straightenCompass();
         }
-        else if (FLDetect==true && FCDetect==true && FRDetect==true){ //backward
+        else if (FLDetect==true && FRDetect==true){ //backward
             backward(150);
             straight();
             driveMotorDelay = 2000;
@@ -117,22 +110,10 @@ void loop(){
             right();
             driveMotorDelay = 2000;
         }
-        else if(FCDetect==true){  //center
-            backward(150);
-            //delay(100);
-            //if (turnServo.read() == 66){
-            //    left();
-            //}
-            //else if (turnServo.read() == 89){
-            //    right();
-            //}
-            driveMotorDelay = 2000;
-        }
     }
     
     //reset distance sensor detect flags
     FLDetect=false;
-    FCDetect=false;
     FRDetect=false;
     //reset distance sensor detect LEDs
     digitalWrite(10,LOW);
@@ -142,7 +123,7 @@ void loop(){
 
 void forward(int velocity){ //drive forward
     digitalWrite(driveMotorDirectionPin, LOW); //LOW is forward
-    analogWrite(driveMotorSpeedPin, velocity);
+    //analogWrite(driveMotorSpeedPin, velocity);
     driveMotorDirection = false;
     //driveMotorLastDirection = false;
     //Serial.println("forward");
@@ -151,7 +132,7 @@ void forward(int velocity){ //drive forward
 void backward(int velocity){ //drive backward
     delay(50);
     digitalWrite(driveMotorDirectionPin, HIGH); //HIGH is backward
-    analogWrite(driveMotorSpeedPin, velocity);
+    //analogWrite(driveMotorSpeedPin, velocity);
     driveMotorDirection = true;
     //driveMotorLastDirection = true;
     //Serial.println("backward");
