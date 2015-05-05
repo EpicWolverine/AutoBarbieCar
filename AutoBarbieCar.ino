@@ -27,9 +27,11 @@ boolean driveMotorDirection = false; //false=forward; true=backward
 
 /* Distance Sensors */
 int FLDistSensorVal;          //value from the distance Front Left sensor
+//int FLDistSensorValLast;  //last value from the distance Front Left sensor
 const byte FLDistSensorPin = 2;   //Front Left sensor analog pin
 boolean FLDetect = false; //Front Left sensor detection
 int FRDistSensorVal;          //value from the distance Front Right sensor
+//int FRDistSensorValLast;  //last value from the distance Front Right sensor
 const byte FRDistSensorPin = 3;   //Front Right sensor analog pin
 boolean FRDetect = false; //Front Right sensor detection
 int distThreshold = 30;     //threshold for the distance sensor
@@ -56,13 +58,29 @@ void setup(){
     else{
         initCompass(); //initilize the compass; set the direction we will use as "straight"
     }
+    FLDistSensorVal = readSensor(FLDistSensorPin);
+    //FRDistSensorVal = readSensor(FRDistSensorPin);
+    FRDistSensorVal = 1000;
 }
 
 void loop(){
-    //delay(500);
+    delay(50);
     //read distance sensors
-    FLDistSensorVal = (pulseIn(FLDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
-    FRDistSensorVal = (pulseIn(FRDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
+    //FLDistSensorVal = (FLDistSensorAverage.mean()/147)* 2.54; //average the samples and use as "straight"
+    /*
+    int FLtemp = 0;
+    while(FLtemp<FLDistSensorValLast-20){
+        FLtemp = (pulseIn(FLDistSensorPin, HIGH)/147)* 2.54;
+    }
+    FLDistSensorVal = FLtemp; //get value and convert uS to inches to cm
+    */
+    int FLtemp = 0;
+    FLtemp = readSensor(FLDistSensorPin);
+    while(FLtemp<sqrt(FLDistSensorVal)){
+        FLtemp = readSensor(FLDistSensorPin);
+    }
+    FLDistSensorVal = FLtemp;
+    //FRDistSensorVal = (pulseIn(FRDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
     //print distence 
     Serial.print('a');
     Serial.println(FLDistSensorVal);
@@ -72,7 +90,7 @@ void loop(){
     
     //check for distance sensor detection
     if(FLDistSensorVal < distThreshold){FLDetect=true; digitalWrite(10,HIGH);}
-    if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
+    //if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
     
     //check if we need to override a manuver
     if (FLDetect==true && FRDetect==true){ 
@@ -123,7 +141,7 @@ void loop(){
 
 void forward(int velocity){ //drive forward
     digitalWrite(driveMotorDirectionPin, LOW); //LOW is forward
-    //analogWrite(driveMotorSpeedPin, velocity);
+    analogWrite(driveMotorSpeedPin, velocity);
     driveMotorDirection = false;
     //driveMotorLastDirection = false;
     //Serial.println("forward");
@@ -132,7 +150,7 @@ void forward(int velocity){ //drive forward
 void backward(int velocity){ //drive backward
     delay(50);
     digitalWrite(driveMotorDirectionPin, HIGH); //HIGH is backward
-    //analogWrite(driveMotorSpeedPin, velocity);
+    analogWrite(driveMotorSpeedPin, velocity);
     driveMotorDirection = true;
     //driveMotorLastDirection = true;
     //Serial.println("backward");
@@ -208,4 +226,8 @@ void straightenCompass(){ //determine if car is not straight and turn if necessa
     else{ //straight enough
         straight();
     }
+}
+
+long readSensor(byte pwPin){
+    return (pulseIn(pwPin, HIGH)/147)*2.54;
 }
