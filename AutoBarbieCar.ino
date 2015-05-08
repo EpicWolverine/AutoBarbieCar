@@ -58,13 +58,13 @@ void setup(){
     else{
         initCompass(); //initilize the compass; set the direction we will use as "straight"
     }
-    FLDistSensorVal = readSensor(FLDistSensorPin);
-    //FRDistSensorVal = readSensor(FRDistSensorPin);
+    FLDistSensorVal = readSensorRaw(FLDistSensorPin);
+    //FRDistSensorVal = readSensorRaw(FRDistSensorPin);
     FRDistSensorVal = 1000;
 }
 
 void loop(){
-    delay(50);
+    delay(5);
     //read distance sensors
     //FLDistSensorVal = (FLDistSensorAverage.mean()/147)* 2.54; //average the samples and use as "straight"
     /*
@@ -74,12 +74,8 @@ void loop(){
     }
     FLDistSensorVal = FLtemp; //get value and convert uS to inches to cm
     */
-    int FLtemp = 0;
-    FLtemp = readSensor(FLDistSensorPin);
-    while(FLtemp<sqrt(FLDistSensorVal)){
-        FLtemp = readSensor(FLDistSensorPin);
-    }
-    FLDistSensorVal = FLtemp;
+    //FLDistSensorVal = readSensorRaw(FLDistSensorPin);
+    FLDistSensorVal = readSensorCorrected(FLDistSensorPin, FLDistSensorVal);
     //FRDistSensorVal = (pulseIn(FRDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
     //print distence 
     Serial.print('a');
@@ -188,6 +184,10 @@ void initCompass(){ //initilize the compass; set the direction we will use as "s
 }
 
 float getCompass(){ //read from the compass, convert to 360 degrees, and return as float
+    if(!mag.begin()){ //initilize compass
+        //There was a problem detecting the LSM303 ... check your connections
+        Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+    }
     //Get a new sensor event
     sensors_event_t event; 
     mag.getEvent(&event);
@@ -228,6 +228,16 @@ void straightenCompass(){ //determine if car is not straight and turn if necessa
     }
 }
 
-long readSensor(byte pwPin){
+long readSensorRaw(byte pwPin){
     return (pulseIn(pwPin, HIGH)/147)*2.54;
+}
+
+long readSensorCorrected(byte pwPin, long pulse){
+    int pulsetemp = 0;
+    pulsetemp = readSensorRaw(pwPin);
+    while(pulsetemp<sqrt(pulse)){
+        delayMicroseconds(50);
+        pulsetemp = readSensorRaw(pwPin);
+    }
+    return pulsetemp;
 }
