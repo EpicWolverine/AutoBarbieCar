@@ -59,24 +59,14 @@ void setup(){
         initCompass(); //initilize the compass; set the direction we will use as "straight"
     }
     FLDistSensorVal = readSensorRaw(FLDistSensorPin);
-    //FRDistSensorVal = readSensorRaw(FRDistSensorPin);
-    FRDistSensorVal = 1000;
+    FRDistSensorVal = readSensorRaw(FRDistSensorPin);
 }
 
 void loop(){
     delay(5);
     //read distance sensors
-    //FLDistSensorVal = (FLDistSensorAverage.mean()/147)* 2.54; //average the samples and use as "straight"
-    /*
-    int FLtemp = 0;
-    while(FLtemp<FLDistSensorValLast-20){
-        FLtemp = (pulseIn(FLDistSensorPin, HIGH)/147)* 2.54;
-    }
-    FLDistSensorVal = FLtemp; //get value and convert uS to inches to cm
-    */
-    //FLDistSensorVal = readSensorRaw(FLDistSensorPin);
     FLDistSensorVal = readSensorCorrected(FLDistSensorPin, FLDistSensorVal);
-    //FRDistSensorVal = (pulseIn(FRDistSensorPin, HIGH)/147)* 2.54; //get value and convert uS to inches to cm
+    FRDistSensorVal = readSensorCorrected(FRDistSensorPin, FRDistSensorVal);
     //print distence 
     Serial.print('a');
     Serial.println(FLDistSensorVal);
@@ -86,7 +76,7 @@ void loop(){
     
     //check for distance sensor detection
     if(FLDistSensorVal < distThreshold){FLDetect=true; digitalWrite(10,HIGH);}
-    //if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
+    if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
     
     //check if we need to override a manuver
     if (FLDetect==true && FRDetect==true){ 
@@ -135,6 +125,7 @@ void loop(){
     digitalWrite(12,LOW);
 }
 
+/* Basic Manuver Functions */
 void forward(int velocity){ //drive forward
     digitalWrite(driveMotorDirectionPin, LOW); //LOW is forward
     analogWrite(driveMotorSpeedPin, velocity);
@@ -173,6 +164,12 @@ void right(){ //turn wheels right
     //Serial.println("right");
 }
 
+/* Advanced Manuver Functions */
+void search(){ //searches for a direction to drive
+    
+}
+
+/* Compass Functions */
 void initCompass(){ //initilize the compass; set the direction we will use as "straight"
     Average<float> ave(5);
     for(byte x=0; x<5; x++){ //take five samples
@@ -228,6 +225,7 @@ void straightenCompass(){ //determine if car is not straight and turn if necessa
     }
 }
 
+/* Distance Sensor Functions */
 long readSensorRaw(byte pwPin){
     return (pulseIn(pwPin, HIGH)/147)*2.54;
 }
