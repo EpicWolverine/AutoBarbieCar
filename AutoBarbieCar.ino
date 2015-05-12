@@ -79,7 +79,7 @@ void loop(){
     if(FRDistSensorVal < distThreshold){FRDetect=true; digitalWrite(12,HIGH);}
     
     //check if we need to override a manuver
-    if (FLDetect==true && FRDetect==true){ 
+    if (FLDetect==true && FRDetect==true){ //both
         delayOverride = true;
     }
     else if(FLDetect==true && turnServoDirection != 0){ //left
@@ -94,6 +94,11 @@ void loop(){
         delayOverride = false; //reset override flag, if any
         driveMotorPreviousMillis = millis(); //set up for next delay
         
+        if (driveMotorDelay > 0){ //code to run after a manuver is completed
+            initCompass(); //reset the compass
+        }
+        
+        //desision tree based on distance sensors
         if(FLDetect==false && FRDetect==false){ //forward
             forward(150);
             driveMotorDelay = 0;
