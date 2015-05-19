@@ -40,6 +40,7 @@ int inBpin[2] = {8, 9};
 int pwmpin[2] = {5, 6};
 unsigned long driveMotorPreviousMillis; //will store last time motor was updated
 int driveMotorDelay; //how long to wait before updating the motor during manuver
+byte turnServoDirection = 1; //0=left; 1=center; 2=right
 
 /* Distance Sensors */
 int FLDistSensorVal;          //value from the distance Front Left sensor
@@ -183,7 +184,7 @@ void backward(int velocity){ //drive backward
 
 void straight(){ //turn wheels straight
     //turnServo.write(79);  //turn servo to x degrees
-    //turnServoDirection = 1;
+    turnServoDirection = 1;
     //turnServoLastDirection = 1
     //Serial.println("straight");
 }
@@ -192,7 +193,7 @@ void left(){ //turn wheels left
     motorGo(0, CW, 1023);
     motorGo(1, CW, 1023);
     //turnServo.write(66); //turn servo to x degrees
-    //turnServoDirection = 0;
+    turnServoDirection = 0;
     //turnServoLastDirection = 0;
     //Serial.println("left");
 }
@@ -201,7 +202,7 @@ void right(){ //turn wheels right
     motorGo(0, CCW, 1023);
     motorGo(1, CCW, 1023);
     //turnServo.write(89); //turn servo to x degrees
-    //turnServoDirection  = 2;
+    turnServoDirection = 2;
     //turnServoLastDirection = 2;
     //Serial.println("right");
 }
