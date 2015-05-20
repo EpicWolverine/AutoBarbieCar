@@ -55,11 +55,19 @@ int distThreshold = 30;     //threshold for the distance sensor
 
 boolean delayOverride = false;
 
+/* Color Sensor */
+#include <Wire.h> //Remember to get the Library Downloaded
+#include "Adafruit_TCS34725.h" //Another Part of the Library
+#define commonAnode true //Absolutely Vital; No idea what it does
+byte gammatable[256]; //See above comment
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X); //I^2C communications from sensor to board
+int ColorSensorVal = 0; // 0=white/tarmac; 1=red; 2=green; 3=yellow;
+
 void setup(){
     randomSeed(analogRead(3)); //initialize random seed
     Serial.begin(9600); //start Serial
   
-    //set pins
+    /* Set Pins */
     pinMode(FLDistSensorPin, INPUT);
     pinMode(FRDistSensorPin, INPUT);
     //pinMode(10, OUTPUT); //left LED (red)
@@ -73,11 +81,13 @@ void setup(){
       pinMode(pwmpin[i], OUTPUT);
     }
     
-    //initilize
+    /* Initilize */
+    //drive motor
     for (int i=0; i<2; i++){ //initilize motors, not running
       digitalWrite(inApin[i], LOW);
       digitalWrite(inBpin[i], LOW);
     }
+    //compass
     if(!mag.begin()){ //initilize compass
         //There was a problem detecting the LSM303 ... check your connections
         Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
@@ -86,8 +96,30 @@ void setup(){
     else{
         initCompass(); //initilize the compass; set the direction we will use as "straight"
     }
+    //distance sensors
     FLDistSensorVal = readSensorRaw(FLDistSensorPin);
     FRDistSensorVal = readSensorRaw(FRDistSensorPin);
+    //color sensor
+    Serial.println("Color View Test!");
+    if (tcs.begin()){
+      Serial.println("Found sensor");
+    }
+    else{
+      Serial.println("No TCS34725 found ... check your connections");
+      while (1);
+    }
+    for (int i = 0; i < 256; i++){
+      float x = i;
+      x /= 255;
+      x = pow(x, 2.5);
+      x *= 255;
+       if (commonAnode){
+         gammatable[i] = 255 - x;
+       }
+       else{
+         gammatable[i] = x;
+       }
+    }
 }
 
 void loop(){
@@ -315,4 +347,51 @@ void motorOff(int motor) //Choose the motor to turn off, 0 or 1.
     digitalWrite(inBpin[i], LOW);
   }
   analogWrite(pwmpin[motor], 0);
+}
+
+int readColorSensor(){ //Reads Color Sensor, Returns a Number for Color Value; See guide at library inclusions
+  uint16_t clear, red, green, blue;
+  tcs.setInterrupt(false);
+  //delay(50);
+  tcs.getRawData(&red, &green, &blue, &clear);
+  tcs.setInterrupt(true);
+  uint32_t sum = clear;
+  float r, g, b;
+  r = red; r /= sum;
+  g = green; g /= sum;
+  b = blue; b /= sum;
+  r *= 256; g *= 256; b *= 256;
+  //Serial.println("RED RED RED RED RED RED"); //Use this code to get raw RGB values
+  //Serial.println(r);
+  //Serial.println("GREEN GREEN GREEN GREEN");
+  //Serial.println(g);
+  //Serial.println("BLUE BLUE BLUE BLUE BLUE");
+  //Serial.println(b);
+  if ((r / g) >=1.00 && (r/g)<=1.6 && (r / b)>=1.3 && (r / b)<=2.3){ //WHITE-TOP
+    //Serial.println("WhiteTop/////*****");
+    ColorSensorVal = 0;
+    return ColorSensorVal;
+  }
+  if(r<110 && g<90 && b<90){ //(r/g) >=0.80 && (r/b)>=1.0 && (r/g)<=1.0 && (r/b)<=1.3 //DARK TARMAC
+    //Serial.println("REALIGN NEEDED===========================");
+    ColorSensorVal = 0;
+    return ColorSensorVal;
+}
+  else{ //If its not off the track. May need logic edit.
+   if ((r / g) >= 2.3 && (r / b) >= 2.3){ //RED
+    //Serial.println("RED/////######");
+    ColorSensorVal = 1;
+    return ColorSensorVal;
+  }
+   if ((r / g) <= 0.80 && (g/b) >= 2.00 ){  //(g / b) >= 1.15 //(r / b)<=1.2 //GREEN
+    //Serial.println("GREEN/////&&&&&");
+    ColorSensorVal = 2;
+    return ColorSensorVal;
+  }
+  if ((r / g) >= 0.9 && (r / g) <=1.7 && (r/b)>=2.5 && (r / b) <= 3.8){ //(r/g)<=2.20 //YELLOW
+    //Serial.println("YELLOW/////@@@@@");
+    ColorSensorVal = 3;
+    return ColorSensorVal;
+  }
+  }
 }
