@@ -49,7 +49,7 @@ byte turnServoDirection = 1; //0=left; 1=center; 2=right
     int BRDistSensorVal;          //value from the distance Front Right sensor
     const byte BRDistSensorPin = 13;   //Back Right sensor analog pin
     boolean BRDetect = false; //Back Right sensor detection
-int distThreshold = 30;     //threshold for the distance sensor
+int distThreshold = 50;     //threshold for the distance sensor
 
 boolean delayOverride = false;
 
@@ -132,13 +132,7 @@ void loop(){
     detectDistSensors();
     
     //check if we need to override a manuver
-    if (FLDetect==true && FRDetect==true){ //both
-        delayOverride = true;
-    }
-    else if(FLDetect==true && turnServoDirection != 0){ //left
-        delayOverride = true;
-    }
-    else if(FRDetect==true && turnServoDirection != 2){ //right
+    if (FLDetect==true || FLCDetect==true || FRCDetect==true || FRDetect==true){
         delayOverride = true;
     }
     
@@ -152,25 +146,22 @@ void loop(){
         }
         
         //desision tree based on distance sensors
-        if(FLDetect==false && FRDetect==false){ //forward
+        if(FLDetect==false && FLCDetect==false && FRCDetect==false && FRDetect==false){ //forward
             forward(1023);
             driveMotorDelay = 0;
             straightenCompass();
         }
-        else if (FLDetect==true && FRDetect==true){ //backward
+        else if (FLDetect==true && FLCDetect==true && FRCDetect==true && FRDetect==true){ //backward
             backward(1023);
-            straight();
-            driveMotorDelay = 2000;
+            driveMotorDelay = 1000;
         }
         else if(FLDetect==true){  //left
-            //backward(150);
             left(511);
-            driveMotorDelay = 2000;
+            driveMotorDelay = 500;
         }
         else if(FRDetect==true){  //right
-            //backward(150);
             right(511);
-            driveMotorDelay = 2000;
+            driveMotorDelay = 500;
         }
     }
     
@@ -187,8 +178,8 @@ void forward(int velocity){ //drive forward
 }
 
 void backward(int velocity){ //drive backward
-    brake();
-    delay(50);
+    //brake();
+    //delay(50);
     motorGo(0, CCW, velocity);
     motorGo(1, CW, velocity);
 }
@@ -216,7 +207,45 @@ void brake(){
 
 /* Advanced Manuver Functions */
 void search(){ //searches for a direction to drive
+    brake();
+    //check left
+    float turnDeviation = -45; //how far to turn in degrees
+    left(511); //turn left at half speed
+    while(calculateCompassDeviation() > turnDeviation){ 
+        delay(25); //wait a little and check again
+    }
+    brake(); //stop, hammer time
+    readDistSensors();
+    if(FLDetect==false || FLCDetect==false || FRCDetect==false ){ 
+        initCompass();
+        resetDistSensorFlags();
+        return;
+    }
     
+    //check right
+    float turnDeviation = 45; //how far to turn in degrees
+    right(511); //turn left at half speed
+    while(calculateCompassDeviation() < turnDeviation){ 
+        delay(25); //wait a little and check again
+    }
+    brake();
+    readDistSensors();
+    if(FLCDetect==false || FRCDetect==false || FRDetect==false ){ 
+        initCompass();
+        resetDistSensorFlags();
+        return;
+    }
+    
+    //back up and try again
+    float turnDeviation = 0; //how far to turn in degrees
+    left(511); //turn left at half speed
+    while(calculateCompassDeviation() > turnDeviation){ 
+        delay(25); //wait a little and check again
+    }
+    brake();
+    backward(511);
+    delay(250);
+    search();
 }
 
 /* Compass Functions */
