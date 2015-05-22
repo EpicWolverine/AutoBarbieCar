@@ -64,7 +64,6 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS3472
 int ColorSensorVal = 0; // 0=white/tarmac; 1=red; 2=green; 3=yellow;
 
 void setup(){
-    randomSeed(analogRead(3)); //initialize random seed
     Serial.begin(9600); //start Serial
   
     /* Set Pins */
