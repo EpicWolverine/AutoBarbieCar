@@ -11,7 +11,7 @@ Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345); //compass 
 const float Pi = 3.14159; //apparently the pi constant isn't built into Arduino
 float compassStraight = 0.0; //this will hold what we decide as "straight"
 
-/* Monster Motor Sheild */
+/* Monster Motor Shield */
 #define BRAKEVCC 0
 #define CW   1 //Clockwise Arguement in motorGo
 #define CCW  2 //Counterclockwise Arguement in motorGo
@@ -23,6 +23,8 @@ int pwmpin[2] = {5, 6};
 unsigned long driveMotorPreviousMillis; //will store last time motor was updated
 int driveMotorDelay; //how long to wait before updating the motor during manuver
 byte turnServoDirection = 1; //0=left; 1=center; 2=right
+int standardDriveSpeed = 100;
+int standardTurnSpeed = 50;
 
 /* Distance Sensors */
 // FL = FrontLeft
@@ -107,7 +109,7 @@ void setup(){
     }
     else{
       Serial.println("No TCS34725 found ... check your connections");
-      while (1);
+      while(1);
     }
     for (int i = 0; i < 256; i++){
       float x = i;
@@ -146,23 +148,25 @@ void loop(){
         }
         
         //desision tree based on distance sensors
+        
         if(FLDetect==false && FLCDetect==false && FRCDetect==false && FRDetect==false){ //forward
-            forward(1023);
+            forward(standardDriveSpeed);
             driveMotorDelay = 0;
             straightenCompass();
         }
         else if (FLDetect==true && FLCDetect==true && FRCDetect==true && FRDetect==true){ //backward
-            backward(1023);
-            driveMotorDelay = 1000;
+            search();
+//            backward(standardDriveSpeed);
+//            driveMotorDelay = 1000;
         }
-        else if(FLDetect==true){  //left
-            left(511);
-            driveMotorDelay = 500;
-        }
-        else if(FRDetect==true){  //right
-            right(511);
-            driveMotorDelay = 500;
-        }
+//        else if(FLDetect==true){  //left
+//            left(standardTurnSpeed);
+//            driveMotorDelay = 500;
+//        }
+//        else if(FRDetect==true){  //right
+//            right(standardTurnSpeed);
+//            driveMotorDelay = 500;
+//        }
     }
     
     //reset distance sensor detect flags
@@ -174,14 +178,14 @@ void loop(){
 /* Basic Manuver Functions */
 void forward(int velocity){ //drive forward
     motorGo(0, CW, velocity);
-    motorGo(1, CCW, velocity);
+    motorGo(1, CCW, velocity+5);
 }
 
 void backward(int velocity){ //drive backward
     //brake();
     //delay(50);
     motorGo(0, CCW, velocity);
-    motorGo(1, CW, velocity);
+    motorGo(1, CW, velocity+5);
 }
 
 void straight(){ //turn wheels straight
@@ -190,13 +194,13 @@ void straight(){ //turn wheels straight
 
 void left(int velocity){ //turn wheels left
     motorGo(0, CW, velocity);
-    motorGo(1, CW, velocity);
+    motorGo(1, CW, velocity+5);
     turnServoDirection = 0;
 }
 
 void right(int velocity){ //turn wheels right
     motorGo(0, CCW, velocity);
-    motorGo(1, CCW, velocity);
+    motorGo(1, CCW, velocity+5);
     turnServoDirection = 2;
 }
 
@@ -208,9 +212,10 @@ void brake(){
 /* Advanced Manuver Functions */
 void search(){ //searches for a direction to drive
     brake();
+    
     //check left
     float turnDeviation = -45; //how far to turn in degrees
-    left(511); //turn left at half speed
+    left(standardTurnSpeed); //turn left at half speed
     while(calculateCompassDeviation() > turnDeviation){ 
         delay(25); //wait a little and check again
     }
@@ -223,8 +228,8 @@ void search(){ //searches for a direction to drive
     }
     
     //check right
-    float turnDeviation = 45; //how far to turn in degrees
-    right(511); //turn left at half speed
+    turnDeviation = 45; //how far to turn in degrees
+    right(standardTurnSpeed); //turn left at half speed
     while(calculateCompassDeviation() < turnDeviation){ 
         delay(25); //wait a little and check again
     }
@@ -237,13 +242,13 @@ void search(){ //searches for a direction to drive
     }
     
     //back up and try again
-    float turnDeviation = 0; //how far to turn in degrees
-    left(511); //turn left at half speed
+    turnDeviation = 0; //how far to turn in degrees
+    left(standardTurnSpeed); //turn left at half speed
     while(calculateCompassDeviation() > turnDeviation){ 
         delay(25); //wait a little and check again
     }
     brake();
-    backward(511);
+    backward(standardTurnSpeed);
     delay(250);
     search();
 }
@@ -299,10 +304,10 @@ void straightenCompass(){ //determine if car is not straight and turn if necessa
     float diff = calculateCompassDeviation();
     
     if (diff > compassTolerance){ //too far right, turn left
-        left(511);
+        left(standardTurnSpeed);
     }
     else if (diff < -compassTolerance){ //too far left, turn right
-        right(511);
+        right(standardTurnSpeed);
     }
     else{ //straight enough
         straight();
