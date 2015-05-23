@@ -193,14 +193,14 @@ void straight(){ //turn wheels straight
 }
 
 void left(int velocity){ //turn wheels left
-    motorGo(0, CW, velocity);
-    motorGo(1, CW, velocity+5);
+    motorGo(0, CCW, velocity);
+    motorGo(1, CCW, velocity+5);
     turnServoDirection = 0;
 }
 
 void right(int velocity){ //turn wheels right
-    motorGo(0, CCW, velocity);
-    motorGo(1, CCW, velocity+5);
+    motorGo(0, CW, velocity);
+    motorGo(1, CW, velocity+5);
     turnServoDirection = 2;
 }
 
