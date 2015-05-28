@@ -1,6 +1,14 @@
-/* Servo */
-//#include <Servo.h> 
-//Servo turnServo;  //create servo object to control a servo 
+/*
+--- AutoBarbieCar ---
+DCTR's Automated Barbie Car Project
+https://github.com/EpicWolverine/AutoBarbieCar
+
+Created in the 2014-2015 school year
+* Major contributor who did most of the work: Brendan "EpicWolverine" Ferracciolo
+* Minor contributor and color sensor master: Alex "Wispio" Nakhleh
+* I think he made an encoder or something: Ryan "Nerdfighter619" Teevens
+
+*/
 
 /* Compass */
 #include <Average.h> //import Average library for compass initialization
